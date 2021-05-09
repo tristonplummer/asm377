@@ -18,6 +18,7 @@ BACKLOG_SIZE    equ 512
 
 ; Epoll constants
 EPOLLIN         equ 0x001
+EPOLLHUP        equ 0x10
 EPOLLRDHUP      equ 0x2000
 EPOLLET         equ 0x80000000
 EPOLL_CTL_ADD   equ 1
@@ -95,10 +96,10 @@ init_network:
     jne .fail
 
     ; Register the socket to be polled for events
-    mov rdi, (EPOLLIN | EPOLLRDHUP | EPOLLET)
-    mov rsi, qword [g_epollDescriptor]
-    mov rdx, qword [g_socket]
-    call epoll_register
+    mov rdi, qword [g_epollDescriptor]
+    mov rsi, qword [g_socket]
+    mov rdx, (EPOLLIN | EPOLLRDHUP | EPOLLET)
+    call epoll_ctl_add
     test rax, rax
     je .fail
 
@@ -136,30 +137,30 @@ start_network:
     pop rbp
     ret
 
-; Register events for epoll
+; Registers epoll events for a file descriptor.
 ;
 ; Usage:
-; mov rdi, events
-; mov rsi, epoll_descriptor
-; mov rdx, socket
-; call epoll_register
-epoll_register:
+; mov rdi, epoll_descriptor
+; mov rsi, file_descriptor
+; mov rdx, flags
+; call epoll_ctl_add
+epoll_ctl_add:
     push rbp
     mov rbp, rsp
     sub rsp, epoll_event_size
 
     ; Set up the event structure
-    mov [rsp+epoll_event.events], rdi
-    mov [rsp+epoll_event.fd], rdx
+    mov [rsp+epoll_event.events], rdx
+    mov [rsp+epoll_event.fd], rsi
 
     ; Register for epoll
-    mov rdi, rsi
+    mov rdx, rsi
     mov rsi, EPOLL_CTL_ADD
     mov rcx, rsp
     call epoll_ctl
     cmp rax, -1
     je .fail
-    mov rax, 1
+    mov al, 1
     jmp .exit
 .fail:
     xor rax, rax
@@ -275,6 +276,14 @@ accept_socket:
     ; Set the socket as non-blocking
     mov rdi, rax
     call set_non_blocking
+    test al, al
+    je .fail
+
+    ; Add the socket to the epoll monitor
+    mov rdi, qword [g_epollDescriptor]
+    mov esi, dword [rsp+sockaddr_in_size+4]
+    mov rdx, (EPOLLIN | EPOLLET | EPOLLRDHUP | EPOLLHUP)
+    call epoll_ctl_add
     test al, al
     je .fail
 
