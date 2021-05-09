@@ -33,6 +33,7 @@ main:
     ; EXIT_SUCCESS
     xor rax, rax
     jmp .exit
+
 ; Failed to initialise the network
 .network_failed:
     xor esi, esi
