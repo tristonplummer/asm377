@@ -11,4 +11,10 @@ Building asm377 requires having [nasm][nasm] installed, and be building on a uni
 
 I am a masochist.
 
+## FAQ
+
+**Q: Can you really say it's written in Assembly if you're using libc?**
+
+A: Shut up.
+
 [nasm]: https://nasm.us
