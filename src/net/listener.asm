@@ -10,6 +10,7 @@ extern epoll_wait
 extern fcntl
 extern accept
 extern inet_ntop
+extern close
 
 ; Socket-related constants
 AF_INET         equ 2
@@ -22,6 +23,7 @@ EPOLLHUP        equ 0x10
 EPOLLRDHUP      equ 0x2000
 EPOLLET         equ 0x80000000
 EPOLL_CTL_ADD   equ 1
+EPOLL_CTL_DEL   equ 2
 EPOLL_MAXEVENTS equ 128
 
 ; Fnctl constants
@@ -243,7 +245,7 @@ epoll_monitor:
     call read_data
     jmp .rerun_event_loop
 .check_closed:
-    and rdx, EPOLLRDHUP
+    and rdx, (EPOLLRDHUP | EPOLLHUP)
     jne .rerun_event_loop
     call close_socket
     jmp .rerun_event_loop
@@ -314,6 +316,9 @@ read_data:
     push rbp
     mov rbp, rsp
 
+    mov edi, g_readDataMsg
+    call printf
+
     mov rsp, rbp
     pop rbp
     ret
@@ -326,6 +331,17 @@ read_data:
 close_socket:
     push rbp
     mov rbp, rsp
+
+    ; Remote the socket from epoll
+    mov rdx, rdi
+    mov rdi, qword [g_epollDescriptor]
+    mov rsi, EPOLL_CTL_DEL
+    xor rcx, rcx
+    call epoll_ctl
+
+    ; Close the socket
+    mov rdi, rdx
+    call close
 
     mov rsp, rbp
     pop rbp
