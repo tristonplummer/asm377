@@ -6,6 +6,7 @@ extern printf
 extern signal
 extern exit
 extern close
+extern shutdown
 
 ; Code section.
 section .text
@@ -18,7 +19,11 @@ section .text
 
 ; Signal constants
 SIGINT  equ 2
+SIGSEGV equ 11
 SIGTERM equ 15
+
+; Socket shutdown type
+SHUT_RDWR   equ 2
 
 ; The entry point of the game server.
 main:
@@ -39,6 +44,9 @@ main:
     mov rsi, sigterm_handler
     call signal
     mov rdi, SIGTERM
+    mov rsi, sigterm_handler
+    call signal
+    mov rdi, SIGSEGV
     mov rsi, sigterm_handler
     call signal
 
@@ -67,7 +75,8 @@ sigterm_handler:
 
     ; Close the socket and epoll descriptor
     mov rdi, qword [g_socket]
-    call close
+    mov rsi, SHUT_RDWR
+    call shutdown
     mov rdi, qword [g_epollDescriptor]
     call close
 
