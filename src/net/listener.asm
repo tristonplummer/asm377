@@ -241,6 +241,7 @@ epoll_monitor:
 .check_recv_data:
     ; Check if we should read incoming data
     and rdx, EPOLLIN
+    cmp rdx, EPOLLIN
     jne .check_closed
     call read_data
     jmp .rerun_event_loop
