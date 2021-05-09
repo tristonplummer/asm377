@@ -3,6 +3,9 @@ default rel
 
 ; Declare external functions.
 extern printf
+extern signal
+extern exit
+extern close
 
 ; Code section.
 section .text
@@ -12,6 +15,10 @@ section .text
 %include "src/game/world.asm"
 %include "src/net/listener.asm"
 %include "src/util/time.asm"
+
+; Signal constants
+SIGINT  equ 2
+SIGTERM equ 15
 
 ; The entry point of the game server.
 main:
@@ -26,6 +33,14 @@ main:
     call init_network
     test rax, rax
     je .network_failed
+
+    ; Register a signal handler for SIGINT and SIGTERM.
+    mov rdi, SIGINT
+    mov rsi, sigterm_handler
+    call signal
+    mov rdi, SIGTERM
+    mov rsi, sigterm_handler
+    call signal
 
     ; Start the game world.
     call start_game_world
@@ -44,3 +59,22 @@ main:
     mov rsp, rbp
     pop rbp
     ret
+
+; Catches a termination signal.
+sigterm_handler:
+    push rbp
+    mov rbp, rsp
+
+    ; Close the socket and epoll descriptor
+    mov rdi, qword [g_socket]
+    call close
+    mov rdi, qword [g_epollDescriptor]
+    call close
+
+    ; Exit the process
+    call exit
+
+    mov rsp, rbp
+    pop rbp
+    ret
+
