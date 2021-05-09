@@ -8,6 +8,8 @@ g_netFailMsg            db  "Failed to listen on port %d (perhaps a server is al
 g_acceptConMsg          db  "Accept new connection", 10, 0
 g_readDataMsg           db  "Read data from socket", 10, 0
 g_closeSocketMsg        db  "Close socket", 10, 0
+g_acceptFailedMsg       db  "Accept socket failed", 10, 0
+g_acceptSuccessMsg      db  "Accepted connection from %s.", 10, 0
 
 ; Mutable global data
 ; =====================================
