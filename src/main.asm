@@ -14,6 +14,7 @@ section .text
 
 ; Include other files.
 %include "src/game/world.asm"
+%include "src/net/client.asm"
 %include "src/net/listener.asm"
 %include "src/util/time.asm"
 
@@ -44,9 +45,6 @@ main:
     mov rsi, sigterm_handler
     call signal
     mov rdi, SIGTERM
-    mov rsi, sigterm_handler
-    call signal
-    mov rdi, SIGSEGV
     mov rsi, sigterm_handler
     call signal
 

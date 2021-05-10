@@ -11,11 +11,14 @@ extern fcntl
 extern accept
 extern inet_ntop
 extern close
+extern bzero
+extern read
 
 ; Socket-related constants
 AF_INET         equ 2
 SOCK_STREAM     equ 1
 BACKLOG_SIZE    equ 512
+BUFFER_SIZE     equ 2048
 
 ; Epoll constants
 EPOLLIN         equ 0x001
@@ -55,6 +58,18 @@ init_network:
 
     ; Allocate space for required local variables
     sub rsp, sockaddr_in_size
+
+    ; Allocate memory for the client map.
+    mov edi, dword [g_maxUsers]
+    imul edi, 8
+    call malloc
+    mov [g_clientList], rax
+
+    ; Zero-out the map.
+    mov rsi, rdi
+    mov rdi, rax
+    call bzero
+    xor rax, rax
 
     ; Register an epoll descriptor
     xor rdi, rdi
@@ -299,9 +314,22 @@ accept_socket:
     test rax, rax
     je .fail
 
+    ; Allocate a client.
+    mov rdi, client_size
+    call malloc
+
+    ; Construct the client.
+    mov rdi, rax
+    mov esi, dword [rsp+sockaddr_in_size+4]
+    lea rdx, [rsp+sockaddr_in_size+8]
+    call client_constructor
+
+    ; Add the client
+    call add_client
+
     ; Print the address of the remote socket.
     mov rdi, g_acceptSuccessMsg
-    mov rsi, rax
+    lea rsi, [rsp+sockaddr_in_size+8]
     call printf
     jmp .exit
 .fail:
@@ -316,8 +344,27 @@ accept_socket:
 read_data:
     push rbp
     mov rbp, rsp
+    sub rsp, BUFFER_SIZE + 8   ; Allocate a buffer to read into.
+    mov [rsp+BUFFER_SIZE], rdi
 
-    mov edi, g_readDataMsg
+    ; Zero-out the buffer.
+    mov rdi, rsp
+    mov rsi, BUFFER_SIZE
+    call bzero
+
+    ; Read from the socket.
+    mov rdi, [rsp+BUFFER_SIZE]
+    mov rsi, rsp
+    mov rdx, BUFFER_SIZE
+    call read
+
+    ; Print the client address.
+    mov rdi, [rsp+BUFFER_SIZE]
+    mov rsi, rax
+    call get_client
+    mov rdx, rax
+    mov rdi, g_readMsg
+    lea rcx, [rax+client.addr]
     call printf
 
     mov rsp, rbp
@@ -333,6 +380,9 @@ close_socket:
     push rbp
     mov rbp, rsp
 
+    ; Remove the client.
+    call remove_client
+
     ; Remote the socket from epoll
     mov rdx, rdi
     mov rdi, qword [g_epollDescriptor]
@@ -344,6 +394,69 @@ close_socket:
     mov rdi, rdx
     call close
 
+    mov rsp, rbp
+    pop rbp
+    ret
+
+; Adds a client to the client map.
+;
+; Usage:
+; mov rdi, client
+; mov rsi, socket
+; call add_client
+add_client:
+    push rbp
+    mov rbp, rsp
+    push rdx
+    push rcx
+
+    mov rdx, [g_clientList]
+    lea rcx, [rdx+rsi*8]
+    mov [rcx], rdi
+    inc dword [g_clientSize]
+
+    pop rcx
+    pop rdx
+    mov rsp, rbp
+    pop rbp
+    ret
+
+; Removes a client from the client map. The client will be returned in rax.
+;
+; Usage:
+; mov rdi, socket
+; call remove_client
+remove_client:
+    push rbp
+    mov rbp, rsp
+    push rdx
+    push rcx
+
+    mov rdx, [g_clientList]
+    lea rcx, [rdx+rdi*8]
+    mov [rcx], rdi
+    dec dword [g_clientSize]
+
+    pop rcx
+    pop rdx
+    mov rsp, rbp
+    pop rbp
+    ret
+
+; Gets a client for a socket descriptor. The client will be returned in rax.
+;
+; Usage:
+; mov rdi, socket
+; call get_client
+get_client:
+    push rbp
+    mov rbp, rsp
+    push rdx
+
+    mov rdx, [g_clientList]
+    mov rax, [rdx+rdi*8]
+
+    pop rdx
     mov rsp, rbp
     pop rbp
     ret
