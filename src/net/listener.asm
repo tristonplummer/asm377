@@ -357,16 +357,16 @@ read_data:
     mov rsi, rsp
     mov rdx, BUFFER_SIZE
     call read
+    test rax, rax
+    je .exit
 
-    ; Print the client address.
+    ; Execute the decoder.
     mov rdi, [rsp+BUFFER_SIZE]
-    mov rsi, rax
     call get_client
-    mov rdx, rax
-    mov rdi, g_readMsg
-    lea rcx, [rax+client.addr]
-    call printf
-
+    mov rdi, rax
+    mov rcx, [rdi+client.decoder]
+    call rcx
+.exit:
     mov rsp, rbp
     pop rbp
     ret

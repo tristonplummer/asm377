@@ -31,8 +31,8 @@ client_constructor:
     mov byte [rdi+client.addr+16], 0   ; Null terminator
     xor rax, rax
 
-    ; Zero out the fields.
-    mov [rdi+client.decoder], rax
+    ; Default initialise the codec.
+    mov qword [rdi+client.decoder], decode_handshake_message
 
     pop rsi
     mov rsp, rbp
