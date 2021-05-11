@@ -10,6 +10,7 @@ struc rsbuffer
     .size:      resd 1
     .position:  resd 1
     .capacity:  resd 1
+    .remaining: resd 1
 endstruc
 
 ; Initialises the rsbuffer structure.
@@ -102,6 +103,7 @@ rsbuffer_compact:
     push rbp
     mov rbp, rsp
     push rcx
+    push rdx
     xor rax, rax
 
     ; Load the position into ecx
@@ -124,7 +126,39 @@ rsbuffer_compact:
     ; Set the position.
     mov dword [rdi+rsbuffer.position], eax
 
+    pop rdx
     pop rcx
+    mov rsp, rbp
+    pop rbp
+    ret
+
+; Read a byte from the buffer. The byte is returned in al.
+;
+; Usage:
+; mov rcx, buffer
+; call rsbuffer_read_byte
+rsbuffer_read_byte:
+    push rbp
+    mov rbp, rsp
+    push rdi
+    push rsi
+    xor rax, rax
+
+    ; Read the byte.
+    mov eax, dword [rcx+rsbuffer.position]
+    mov rdi, qword [rcx+rsbuffer.data]
+    lea rsi, [rdi+rax]
+    mov al, byte [rsi]
+    inc dword [rcx+rsbuffer.position]
+
+    ; Assign the number of remaining bytes.
+    mov edi, dword [rcx+rsbuffer.position]
+    mov esi, dword [rcx+rsbuffer.size]
+    sub esi, edi
+    mov dword [rcx+rsbuffer.remaining], esi
+
+    pop rsi
+    pop rdi
     mov rsp, rbp
     pop rbp
     ret

@@ -10,6 +10,7 @@ g_readDataMsg           db  "Read data from socket", 10, 0
 g_acceptFailedMsg       db  "Accept socket failed", 10, 0
 g_acceptSuccessMsg      db  "Accepted connection from %s.", 10, 0
 g_readMsg               db  "Read %d bytes from client %#08x (%s).", 10, 0
+g_usernameHashMsg       db  "The username hash is %d.", 10, 0
 g_maxUsers              dd  2048
 
 ; Mutable global data

@@ -18,6 +18,7 @@ section .text
 %include "src/net/client.asm"
 %include "src/net/listener.asm"
 %include "src/net/codec/handshake_decoder.asm"
+%include "src/net/codec/login_decoder.asm"
 %include "src/util/time.asm"
 
 ; Signal constants
