@@ -362,7 +362,7 @@ read_data:
     mov rsi, rsp
     mov rdx, BUFFER_SIZE
     call read
-    test rax, rax
+    cmp rax, -1
     je .exit
 
     ; Write the data into the client's buffer.
@@ -393,7 +393,12 @@ close_socket:
     mov rbp, rsp
 
     ; Remove the client.
+    push rdi
     call remove_client
+    mov rdi, rax
+    call client_destructor
+    call free
+    pop rdi
 
     ; Remote the socket from epoll
     mov rdx, rdi
@@ -446,7 +451,7 @@ remove_client:
 
     mov rdx, [g_clientList]
     lea rcx, [rdx+rdi*8]
-    mov [rcx], rdi
+    mov rax, [rcx]
     dec dword [g_clientSize]
 
     pop rcx
