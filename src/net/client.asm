@@ -3,10 +3,11 @@ extern malloc
 
 ; Represents a connected client.
 struc client
-    .socket:    resd 1  ; The socket file descriptor.
-    .addr:      resb 17 ; The remote address.
-    .decoder:   resq 1  ; Pointer to the message decoder.
-    .recv_buf:  resq 1  ; Pointer to the receive buffer.
+    .socket:        resd 1      ; The socket file descriptor.
+    .addr:          resb 17     ; The remote address.
+    .decoder:       resq 1      ; Pointer to the message decoder.
+    .decoder_state: resd 1      ; The state of the decoder.
+    .recv_buf:      resq 1      ; Pointer to the receive buffer.
 endstruc
 
 ; Constructs the client.
@@ -38,6 +39,7 @@ client_constructor:
 
     ; Default initialise the codec.
     mov qword [rdi+client.decoder], decode_handshake_message
+    mov dword [rdi+client.decoder_state], eax
 
     ; Allocate the receive buffer.
     mov rdi, rsbuffer_size
