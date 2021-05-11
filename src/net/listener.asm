@@ -368,14 +368,13 @@ read_data:
     mov rdx, rax
     mov rdi, [rsp+BUFFER_SIZE]
     call get_client
-    mov rdi, [rax+client.recv_buf]
+    mov rcx, rax
+    mov rdi, [rcx+client.recv_buf]
     mov rsi, rsp
     call rsbuffer_write_bytes
 
     ; Execute the decoder.
-    mov rdi, [rsp+BUFFER_SIZE]
-    call get_client
-    mov rdi, rax
+    mov rdi, rcx
     mov rcx, [rdi+client.decoder]
     call rcx
 .exit:
