@@ -13,6 +13,7 @@ extern inet_ntop
 extern close
 extern bzero
 extern read
+extern write
 
 ; Socket-related constants
 AF_INET         equ 2

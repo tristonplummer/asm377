@@ -3,6 +3,10 @@ decode_login_handshake_state    equ 0
 decode_login_header_state       equ 1
 decode_login_payload_state      equ 2
 
+; Login constants
+status_exchange_data            equ 0
+server_seed                     equ 1234
+
 ; A jump table containing the different functions to execute depending on decoder state.
 decode_login_message_states:
     dq decode_login_message_handshake_state
@@ -30,7 +34,7 @@ decode_login_message:
     mov eax, dword [rdi+client.decoder_state]
     cmp eax, decode_login_state_qty
     jge .exit
-    mov rsi, qword [decode_login_message_states+eax*4]
+    mov rsi, qword [decode_login_message_states+eax*8]
     call rsi
 .exit:
     pop rsi
@@ -42,7 +46,7 @@ decode_login_message:
 decode_login_message_handshake_state:
     push rbp
     mov rbp, rsp
-    sub rsp, 8
+    sub rsp, 17 ; Allocate 17 bytes on the stack for the response.
 
     ; If there are no bytes to be read, exit
     cmp dword [rcx+rsbuffer.remaining], 1
@@ -50,12 +54,21 @@ decode_login_message_handshake_state:
 
     ; Read the username hash.
     call rsbuffer_read_byte
-    mov rdi, g_usernameHashMsg
-    mov rsi, rax
-    call printf
+    xor rax, rax
 
     ; Increment the decoder state
     inc dword [rdi+client.decoder_state]
+
+    ; Prepare the handshake response.
+    mov byte [rsp], status_exchange_data
+    mov qword [rsp+1], rax
+    mov qword [rsp+9], server_seed
+
+    ; Write the response to the client.
+    mov edi, dword [rdi+client.socket]
+    mov rsi, rsp    ; The response payload.
+    mov rdx, 17     ; The length of the response
+    call write
 .exit:
     mov rsp, rbp
     pop rbp
