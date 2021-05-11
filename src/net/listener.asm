@@ -322,7 +322,11 @@ accept_socket:
     mov rdi, rax
     mov esi, dword [rsp+sockaddr_in_size+4]
     lea rdx, [rsp+sockaddr_in_size+8]
+    push rdi
+    push rsi
     call client_constructor
+    pop rsi
+    pop rdi
 
     ; Add the client
     call add_client
@@ -359,6 +363,14 @@ read_data:
     call read
     test rax, rax
     je .exit
+
+    ; Write the data into the client's buffer.
+    mov rdx, rax
+    mov rdi, [rsp+BUFFER_SIZE]
+    call get_client
+    mov rdi, [rax+client.recv_buf]
+    mov rsi, rsp
+    call rsbuffer_write_bytes
 
     ; Execute the decoder.
     mov rdi, [rsp+BUFFER_SIZE]

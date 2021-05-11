@@ -14,6 +14,7 @@ section .text
 
 ; Include other files.
 %include "src/game/world.asm"
+%include "src/net/buffer.asm"
 %include "src/net/client.asm"
 %include "src/net/listener.asm"
 %include "src/net/codec/handshake_decoder.asm"

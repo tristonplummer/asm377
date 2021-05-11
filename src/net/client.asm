@@ -6,6 +6,7 @@ struc client
     .socket:    resd 1  ; The socket file descriptor.
     .addr:      resb 17 ; The remote address.
     .decoder:   resq 1  ; Pointer to the message decoder.
+    .recv_buf:  resq 1  ; Pointer to the receive buffer.
 endstruc
 
 ; Constructs the client.
@@ -19,6 +20,10 @@ client_constructor:
     push rbp
     mov rbp, rsp
     push rsi
+    sub rsp, 8
+
+    ; Store the client on the stack.
+    mov qword [rsp], rdi
 
     ; Assign the socket.
     mov dword [rdi], esi
@@ -34,6 +39,18 @@ client_constructor:
     ; Default initialise the codec.
     mov qword [rdi+client.decoder], decode_handshake_message
 
+    ; Allocate the receive buffer.
+    mov rdi, rsbuffer_size
+    call malloc
+    mov rdi, qword [rsp]
+    mov qword [rdi+client.recv_buf], rax
+
+    ; Initialise the receive buffer.
+    mov rdi, rax
+    mov rsi, rsbuffer_default_size
+    call rsbuffer_constructor
+
+    mov rdi, qword [rsp]
     pop rsi
     mov rsp, rbp
     pop rbp
