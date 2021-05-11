@@ -1,12 +1,13 @@
 ; Define external functions
 extern malloc
+extern free
 
 ; Represents a connected client.
 struc client
     .socket:        resd 1      ; The socket file descriptor.
     .addr:          resb 17     ; The remote address.
     .decoder:       resq 1      ; Pointer to the message decoder.
-    .decoder_state: resd 1      ; The state of the decoder.
+    .decoder_state: resb 32     ; The state of the decoder.
     .recv_buf:      resq 1      ; Pointer to the receive buffer.
 endstruc
 

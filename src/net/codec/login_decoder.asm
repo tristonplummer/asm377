@@ -8,6 +8,7 @@ decode_login_payload_state      equ 2
 
 ; Login constants
 status_exchange_data            equ 0
+status_ok                       equ 2
 status_rejected_session         equ 11
 login_type_connect              equ 16
 login_type_reconnect            equ 18
@@ -46,19 +47,6 @@ decode_login_message:
 
     ; Load the state of the decoder.
     mov eax, dword [rdi+client.decoder_state]
-    test eax, eax
-    jne .execute_decoder
-
-    ; Allocate the state
-    push rdi
-    mov rdi, login_decoder_state_size
-    call malloc
-    xor rdi, rdi
-    mov dword [rax], edi
-    pop rdi
-    mov dword [rdi+client.decoder_state], eax
-.execute_decoder:
-    mov eax, dword [rax]
     cmp eax, decode_login_state_qty
     jge .exit
     mov rsi, qword [decode_login_message_states+eax*8]
@@ -79,16 +67,12 @@ decode_login_message_handshake_state:
     cmp dword [rcx+rsbuffer.remaining], 1
     jl .exit
 
-    ; Load the decoder state
-    xor rcx, rcx
-    mov ecx, dword [rdi+client.decoder_state]
-
     ; Read the username hash.
     call rsbuffer_read_byte
-    mov byte [rcx+login_decoder_state.username_hash], al
+    mov byte [rdi+client.decoder_state+4], al
 
     ; Increment the decoder state
-    inc dword [rcx]
+    inc dword [rdi+client.decoder_state]
 
     ; Prepare the handshake response.
     xor rax, rax
@@ -131,13 +115,8 @@ decode_login_message_header_state:
     ; Read the length of the login payload
     call rsbuffer_read_byte
 
-    ; Load the decoder state and store the payload length.
-    push rcx
-    xor rcx, rcx
-    mov ecx, dword [rdi+client.decoder_state]
-    mov byte [rcx+login_decoder_state.payload_length], al
-    inc dword [rcx]
-    pop rcx
+    ; Store the payload length.
+    mov byte [rdi+client.decoder_state+5], al
 
     ; Read the payload of the login message.
     call decode_login_message_payload_state
@@ -150,17 +129,29 @@ decode_login_message_header_state:
 decode_login_message_payload_state:
     push rbp
     mov rbp, rsp
-    sub rsp, 8
 
-    ; Read the version
+    ; Ensure there are enough bytes to read.
+    xor rax, rax
+    mov eax, dword [rcx+rsbuffer.remaining]
+    cmp al, byte [rdi+client.decoder_state+5]
+    jl .exit
+
+    ; Version
     call rsbuffer_read_byte
 
-    ; Read the revision
+    ; Revision
     call rsbuffer_read_short
-    mov rdi, g_usernameHashMsg
-    mov rsi, rax
-    call printf
 
+    ; Memory status
+    call rsbuffer_read_byte
+
+    ; Checksums
+    %rep    9
+        call rsbuffer_read_int
+    %endrep
+
+    ; Write a successful response.
+    call write_login_success
 .exit:
     mov rsp, rbp
     pop rbp
@@ -190,6 +181,36 @@ write_response_code:
     ; Close the socket.
     call close_socket
 
+    pop rdi
+    mov rsp, rbp
+    pop rbp
+    ret
+
+; Writes a successful login response to a client.
+;
+; Usage:
+; mov rdi, client
+; call write_login_success
+write_login_success:
+    push rbp
+    mov rbp, rsp
+    push rdi
+    sub rsp, 3
+
+    ; Load the socket into rdi.
+    mov edi, dword [rdi+client.socket]
+
+    ; Prepare the response
+    mov byte [rsp], status_ok
+    mov byte [rsp+1], 0 ; Rights
+    mov byte [rsp+2], 0 ; Flagged
+
+    ; Write the login response
+    mov rsi, rsp
+    mov rdx, 3
+    call write
+
+    add rsp, 3
     pop rdi
     mov rsp, rbp
     pop rbp

@@ -84,6 +84,15 @@ rsbuffer_write_bytes:
     mov edx, dword [rdi+rsbuffer.size]
     add rdx, rax
     mov dword [rdi+rsbuffer.size], edx
+    xor rdx, rdx
+
+    ; Assign the number of remaining bytes.
+    push rdi
+    mov edx, dword [rdi+rsbuffer.position]
+    mov esi, dword [rdi+rsbuffer.size]
+    sub esi, edx
+    mov dword [rdi+rsbuffer.remaining], esi
+    pop rdi
     jmp .exit
 .fail:
     xor rax, rax
@@ -132,6 +141,23 @@ rsbuffer_compact:
     pop rbp
     ret
 
+; Skips a number of bytes in the buffer.
+;
+; Usage:
+; mov rcx, buffer
+; mov rsi, quantity
+; call rsbuffer_skip_bytes
+rsbuffer_skip_bytes:
+    push rbp
+    mov rbp, rsp
+
+    add dword [rcx+rsbuffer.position], esi
+    sub dword [rcx+rsbuffer.remaining], esi
+
+    mov rsp, rbp
+    pop rbp
+    ret
+
 ; Read a byte from the buffer. The byte is returned in al.
 ;
 ; Usage:
@@ -150,6 +176,70 @@ rsbuffer_read_byte:
     lea rsi, [rdi+rax]
     mov al, byte [rsi]
     inc dword [rcx+rsbuffer.position]
+
+    ; Assign the number of remaining bytes.
+    mov edi, dword [rcx+rsbuffer.position]
+    mov esi, dword [rcx+rsbuffer.size]
+    sub esi, edi
+    mov dword [rcx+rsbuffer.remaining], esi
+
+    pop rsi
+    pop rdi
+    mov rsp, rbp
+    pop rbp
+    ret
+
+; Read a short from the buffer. The short is returned in ax.
+;
+; Usage:
+; mov rcx, buffer
+; call rsbuffer_read_short
+rsbuffer_read_short:
+    push rbp
+    mov rbp, rsp
+    push rdi
+    push rsi
+    xor rax, rax
+
+    ; Read the short as big endian.
+    mov eax, dword [rcx+rsbuffer.position]
+    mov rdi, qword [rcx+rsbuffer.data]
+    lea rsi, [rdi+rax]
+    mov ah, byte [rsi]
+    mov al, byte [rsi+1]
+    add dword [rcx+rsbuffer.position], 2
+
+    ; Assign the number of remaining bytes.
+    mov edi, dword [rcx+rsbuffer.position]
+    mov esi, dword [rcx+rsbuffer.size]
+    sub esi, edi
+    mov dword [rcx+rsbuffer.remaining], esi
+
+    pop rsi
+    pop rdi
+    mov rsp, rbp
+    pop rbp
+    ret
+
+; Read an int from the buffer. The int is returned in eax.
+;
+; Usage:
+; mov rcx, buffer
+; call rsbuffer_read_int
+rsbuffer_read_int:
+    push rbp
+    mov rbp, rsp
+    push rdi
+    push rsi
+    xor rax, rax
+
+    ; Read the int as big endian.
+    mov eax, dword [rcx+rsbuffer.position]
+    mov rdi, qword [rcx+rsbuffer.data]
+    lea rsi, [rdi+rax]
+    mov ah, byte [rsi]
+    mov al, byte [rsi+1]
+    add dword [rcx+rsbuffer.position], 4
 
     ; Assign the number of remaining bytes.
     mov edi, dword [rcx+rsbuffer.position]
