@@ -51,6 +51,7 @@ load_rsa_certificate:
     mov rdi, g_rsaModulusMsg
     pop rsi
     call printf
+    mov al, 1
 .exit:
     mov rsp, rbp
     pop rbp
