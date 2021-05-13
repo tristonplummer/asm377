@@ -13,6 +13,7 @@ section .text
     global main
 
 ; Include other files.
+%include "src/crypto/rsa.asm"
 %include "src/game/world.asm"
 %include "src/net/buffer.asm"
 %include "src/net/client.asm"
@@ -37,6 +38,12 @@ main:
     ; Print an initialisation message.
     mov rdi, g_gameInitMessage
     call printf
+
+    ; Initialise OpenSSL
+    call OPENSSL_init_ssl
+    call load_rsa_certificate
+    test rax, rax
+    je .exit
 
     ; Initialise the network
     call init_network

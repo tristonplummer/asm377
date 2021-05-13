@@ -150,8 +150,18 @@ decode_login_message_payload_state:
         call rsbuffer_read_int
     %endrep
 
+    ; Read the length of the encrypted payload.
+    mov sil, byte [rdi+client.decoder_state+5]
+    sub sil, 41
+    call rsbuffer_read_byte
+    cmp al, sil
+    jl .reject
+
     ; Write a successful response.
     call write_login_success
+.reject:
+    mov rsi, status_rejected_session
+    call write_response_code
 .exit:
     mov rsp, rbp
     pop rbp
